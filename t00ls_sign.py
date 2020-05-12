@@ -8,6 +8,7 @@ import re #正则模块
 import time
 import hashlib
 import os
+import json
 
 
 headers = {
@@ -26,13 +27,81 @@ url_signin = 'https://www.t00ls.net/ajax-sign.json'
 # 5 您个人计算机的型号
 # 6 您最喜欢的餐馆名称
 # 7 驾驶执照的最后四位数字
+TIMEOUT=5
+URL_WECHAT_GET_TOKEN ='https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid={corpid}&corpsecret={corpsecret}'
+URL_WECHAT_MESSAGE='https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={token}'
+WECHAT_CORPID=os.environ['WECHAT_CORPID']
+WECHAT_SECRET=os.environ['WECHAT_SECRET']
+AGENT_ID=os.environ['AGENT_ID']
+WX_USER=os.environ['WX_USER']
 
 username = os.environ['T00LS_USERNAME'] # 用户名
 password = os.environ['T00LS_PASSWORD']  # 明文密码或密码MD5
 password_hash = ("T00LS_MD5" in os.environ) and os.environ['T00LS_MD5']=='True' or False  # 密码为md5时设置为True
 questionid = ("T00LS_QID" in os.environ) and os.environ['T00LS_QID'] or ''  # 问题ID，参考上面注释，没有可不填
 answer = ("T00LS_QANS" in os.environ) and os.environ['T00LS_QANS'] or ''   # 问题答案，没有可不填
-SCKEY = ("T00LS_SCKEY" in os.environ) and os.environ['T00LS_SCKEY'] or '' #Server酱申请的skey
+# SCKEY = ("T00LS_SCKEY" in os.environ) and os.environ['T00LS_SCKEY'] or '' #Server酱申请的skey
+
+def Req(url,method='get',payload=None):
+    if method == 'get':
+        try:
+            req = requests.get(url,timeout=int(TIMEOUT))
+            return req
+        except Exception as  e:
+            print(e)
+            return False
+    else:
+        try:
+            print(payload)
+            req = requests.post(url,payload,timeout=int(TIMEOUT))
+            return req
+        except Exception as e:
+            print(e)
+            return False
+
+
+def GetWechatKey():
+    url = URL_WECHAT_GET_TOKEN.format(corpid = WECHAT_CORPID,corpsecret = WECHAT_SECRET)
+    # print(url)
+    try:
+        result = Req(url).json()
+        # print(result)
+        if result['errcode'] == 0: 
+            key = result['access_token']
+            return key
+        else:
+            # print('get wechat token error')
+            return False
+    except Exception as e:
+        print(e)
+        return False
+
+
+def PushWechatMessage(to_user,text_content,token):
+
+    body = {
+   "touser" : "",
+   "toparty" : "",
+   "totag" : "",
+   "msgtype" : "text",
+   "agentid" : int(AGENT_ID),
+   "text" : {
+       "content" : ""
+   },
+   "safe":0,
+   "enable_id_trans": 0,
+   "enable_duplicate_check": 0
+}
+
+    body['touser'] = to_user
+    body['text']['content'] = text_content
+    try:
+        result = Req(URL_WECHAT_MESSAGE.format(token = token),'post',json.dumps(body)).json()
+        # print(result)
+        print('[+] message push sucessful')
+    except Exception as e:
+        print(e)
+        return False
 
 def get_formhash(session):
     res = session.get(url=url_login, headers=headers)
@@ -102,10 +171,10 @@ def main():
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), res_signin.text)
     datamsg={"text":"T00ls签到成功！","desp":res_signin.text}
     if "success" in res_signin.text:
-      if(SCKEY != ''):
-        requests.post("https://sc.ftqq.com/"+SCKEY+".send",data=datamsg)
+        message = 'T00ls签到成功'
+        PushWechatMessage(WX_USER,message,GetWechatKey())
         
 def main_handler(event, context):
-  return main()
+    return main()
 if __name__ == '__main__':
-  main()
+    main()
