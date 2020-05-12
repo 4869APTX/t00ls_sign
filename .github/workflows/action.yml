@@ -27,4 +27,8 @@ jobs:
         T00LS_QID: ${{ secrets.T00LS_QID }}
         T00LS_QANS: ${{ secrets.T00LS_QANS }}
         T00LS_SCKEY: ${{ secrets.T00LS_SCKEY }}
+        WECHAT_CORPID: ${{ secrets.WECHAT_CORPID }}
+        WECHAT_SECRET: ${{ secrets.WECHAT_SECRET }}
+        AGENT_ID: ${{ secrets.AGENT_ID }}
+        WX_USER: ${{ secrets.WX_USER }}
       run: python t00ls_sign.py
